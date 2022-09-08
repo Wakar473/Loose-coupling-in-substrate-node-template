@@ -6,6 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+
+use frame_support::traits::{LockableCurrency, Currency};
+//use frame_support::traits::Currency;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -251,6 +254,32 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_nicks::Config for Runtime {
+	// The Balances pallet implements the ReservableCurrency trait.
+	// `Balances` is defined in `construct_runtime!` macro.
+	type Currency = Balances;
+	
+	// Set ReservationFee to a value.
+	type ReservationFee = ConstU128<100>;
+	
+	// No action is taken when deposits are forfeited.
+	type Slashed = ();
+	
+	// Configure the FRAME System Root origin as the Nick pallet admin.
+	// https://paritytech.github.io/substrate/master/frame_system/enum.RawOrigin.html#variant.Root
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	
+	// Set MinLength of nick name to a desired value.
+	type MinLength = ConstU32<8>;
+	
+	// Set MaxLength of nick name to a desired value.
+	type MaxLength = ConstU32<32>;
+	
+	// The ubiquitous event type.
+	type Event = Event;
+	}
+
+
 impl pallet_transaction_payment::Config for Runtime {
 	type Event = Event;
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
@@ -266,8 +295,9 @@ impl pallet_sudo::Config for Runtime {
 }
 
 /// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
+  impl pallet_template::Config for Runtime {
 	type Event = Event;
+	type LocalCurrency = Balances;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -283,12 +313,15 @@ construct_runtime!(
 		Timestamp: pallet_timestamp,
 		Aura: pallet_aura,
 		Grandpa: pallet_grandpa,
-		Balances: pallet_balances,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
-	}
+		Nicks: pallet_nicks,
+		// Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+  }
+
 );
 
 /// The address format for describing accounts.
